@@ -16,13 +16,19 @@
  */
 package org.deidentifier.arx.algorithm;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.math3.distribution.EnumeratedDistribution;
+import org.apache.commons.math3.random.AbstractRandomGenerator;
+import org.apache.commons.math3.util.Pair;
 import org.deidentifier.arx.framework.check.TransformationChecker;
 import org.deidentifier.arx.framework.check.TransformationChecker.ScoreType;
 import org.deidentifier.arx.framework.check.history.History.StorageStrategy;
 import org.deidentifier.arx.framework.lattice.SolutionSpace;
 import org.deidentifier.arx.framework.lattice.Transformation;
+import org.deidentifier.arx.metric.InformationLoss;
 
 import cern.colt.list.LongArrayList;
 
@@ -85,31 +91,39 @@ public class GAAlgorithm extends AbstractAlgorithm {
 
 		// Fill sub-population 1
 		for (int i = 0; i < k; i++) {
+
+			// Prepare
+			int[] generalization = new int[maxValues.length];
 			
-			int[] vec = new int[maxValues.length];
-			
-			// TODO: I didn't understand the logic that was implemented here
-			// TODO: And just replaced it with random choices
-			// TODO: Maybe this is specified differently and needs to be changed and documented
-			// TODO: Triangle matrix?
-			for (int j = 0; j < maxValues.length; j++) {
-				vec[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
+			// Create "triangle" structure to cover the solution space
+			if (i < this.maxValues.length) {
+
+				// Fill 0 .. i with max generalization levels
+				for (int j = 0; j <= i; j++) {
+					generalization[j] = maxValues[j]; 
+				}
+				
+			} else {
+				
+				// Generate random individual
+				for (int j = 0; j < maxValues.length; j++) {
+					generalization[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
+				}
 			}
-			z1.addIndividual(getIndividual(vec));
+			z1.addIndividual(getIndividual(generalization));
 		}
 
 		// Fill sub-population 2
 		for (int i = 0; i < k; i++) {
+
+			// Prepare
+			int[] generalization = new int[maxValues.length];
 			
-			int[] vec = new int[maxValues.length];
-			
-			// TODO: I didn't understand the logic that was implemented here
-			// TODO: And just replaced it with random choices
-			// TODO: Maybe this is specified differently and needs to be changed and documented
+			// Generate random individual
 			for (int j = 0; j < maxValues.length; j++) {
-				vec[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
+				generalization[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
 			}
-			z2.addIndividual(getIndividual(vec));
+			z2.addIndividual(getIndividual(generalization));
 		}
 
 		// Main iterator
@@ -171,15 +185,58 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	}
 	
 	/**
-	 * Selects a random individual within the given range from [0, range[.
+	 * Selects a random individual within the given range from [0, range[ with probability
+	 * proportional to their scaled fitness.
 	 * 
-	 * @param pop
+	 * @param population
 	 * @param range
 	 * @return
 	 */
-	private Transformation getRandomIndividual(GASubpopulation pop, int range) {
-		int r = (int) (random.nextDouble() * range);
-		return pop.getIndividual(r);
+	private Transformation[] getRandomIndividuals(GASubpopulation population, int range, int count) {
+		
+		// Array of transformations, min and max
+		InformationLoss<?> min = null;
+		InformationLoss<?> max = null;
+		Transformation[] individuals = new Transformation[range];
+		for (int i = 0; i < range; i++) {
+			individuals[i] = population.getIndividual(i);
+			InformationLoss<?> loss = individuals[i].getInformationLoss();
+			if (min == null) {
+				min = loss;
+			} else if (min.compareTo(loss) > 0) {
+				min = loss;
+			}
+			if (max == null) {
+				max = loss;
+			} else if (max.compareTo(loss) < 0) {
+				max = loss;
+			}
+		}
+		
+		// Fitness
+		List<Pair<Transformation, Double>> elements = new ArrayList<>();
+		for (int i = 0; i < range; i++) {
+			elements.add(new Pair<>(individuals[i], 1d - individuals[i].getInformationLoss().relativeTo(min, max)));
+		}
+
+		// Distribution
+		EnumeratedDistribution<Transformation> distribution = new EnumeratedDistribution<Transformation>(new AbstractRandomGenerator() {
+			@Override
+			public double nextDouble() {
+				return random.nextDouble();
+			}
+			@Override
+			public void setSeed(long arg0) {
+				// Do nothing
+			}
+		}, elements);
+		
+		// Sample
+		Transformation[] result = new Transformation[count];
+		for (int i = 0; i < count; i++) {
+			result[i] = distribution.sample();
+		}
+		return result;
 	}
 	
 	/**
@@ -190,43 +247,39 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	private void iterateSubpopulation(GASubpopulation pop) {
 		
 		// The population (ordered by fitness descending) consists of 3 groups
-		// First: all individuals in the elite group will remain unchanged
-		// Second: all individuals in the next group will be crossed over
-		// Third: all remaining individuals will be mutated
+		// - First: all individuals in the elite group will remain unchanged
+		// - Second: all individuals in the next group will be replaced by mutated instances
+		// - Third: all remaining individuals will replaced by crossed-over instances
 		
 		// Calculate mutation configuration parameters
 		int k = pop.individualCount();
 		int crossoverCount = (int) Math.ceil(config.getCrossoverPercent() * k);
 		int eliteCount = (int) Math.ceil(config.getElitePercent() * k);
-		
-		// Crossover a selection of individuals
-		for (int crossover = 0; crossover < crossoverCount; crossover++) {
-			
-			// Select parents from elite group
-			Transformation parent1 = getRandomIndividual(pop, eliteCount);
-			Transformation parent2 = getRandomIndividual(pop, eliteCount);
 
-			// Create crossover child
-			int[] vec = new int[maxValues.length];
-			for (int i = 0; i < maxValues.length; i++) {
-				vec[i] = (random.nextDouble() < 0.5 ? parent1 : parent2).getGeneralization()[i];
-			}
+		// Mutate fittest non-elite individuals
+		Transformation[] parents = getRandomIndividuals(pop, eliteCount, k - crossoverCount - eliteCount);
+		for (int mutation = eliteCount; mutation < k - crossoverCount; mutation++) {
 			
-			// Replace
-			// TODO: This replaces the best individuals of the non-elite group
-			// TODO: Wouldn't it be better to replace the worst individuals in the non-elite group
-			pop.setIndividual(eliteCount + crossover, getIndividual(vec));
-		}
-
-		// Mutate rest of individuals
-		for (int mutation = eliteCount + crossoverCount; mutation < k; mutation++) {
-			
-			// Select random parent from elite group
-			Transformation parent = getRandomIndividual(pop, eliteCount);
-			Transformation individual = getMutatedIndividual(parent);
+			// Mutate
+			Transformation individual = getMutatedIndividual(parents[mutation - eliteCount]);
 			if (individual != null) {
 				pop.setIndividual(mutation, individual);
 			}
+		}
+		
+		// Crossover worst individuals
+		Transformation[] parents1 = getRandomIndividuals(pop, eliteCount, crossoverCount);
+		Transformation[] parents2 = getRandomIndividuals(pop, eliteCount, crossoverCount);
+		for (int crossover = 0; crossover < crossoverCount; crossover++) {
+			
+			// Create crossover child
+			int[] vec = new int[maxValues.length];
+			for (int i = 0; i < maxValues.length; i++) {
+				vec[i] = (random.nextDouble() < 0.5 ? parents1[crossover] : parents2[crossover]).getGeneralization()[i];
+			}
+			
+			// Replace
+			pop.setIndividual(k - crossover - 1, getIndividual(vec));
 		}
 	}
 }
