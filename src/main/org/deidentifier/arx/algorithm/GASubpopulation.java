@@ -65,21 +65,12 @@ public class GASubpopulation {
 	 * @param other
 	 * @param count
 	 */
-	public void moveIndividuals(GASubpopulation other, int count) {
+	public void moveFittestIndividuals(GASubpopulation other, int count) {
 		int size = this.individualCount();
 		int min = Math.min(count, size);
 		for (int i = 0; i < min; i++) {
 			other.individuals.add(individuals.remove(0));
 		}
-	}
-
-	/**
-	 * Removes an individual from the subpopulation.
-	 * 
-	 * @param index
-	 */
-	public void removeIndividual(int index) {
-		individuals.remove(index);
 	}
 
 	/**
@@ -92,13 +83,18 @@ public class GASubpopulation {
 	}
 
 	/**
-	 * Sorts the Individuals according to their information loss.
-	 * TODO: What is the intention here? Sorted by fitness in ascending order or descending order? 
+	 * Sorts the individuals descending by fitness, which means ascending in terms of information loss.
 	 */
 	public void sort() {
+		
+		// Sort descending by fitness, ascending in terms of information loss.
 		individuals.sort((a, b) -> {
-			if (a == null)
+			if (a == null) {
 				return -1;
+			}
+			if (b == null) {
+				return +1;
+			}
 			return a.getInformationLoss().compareTo(b.getInformationLoss());
 		});
 	}

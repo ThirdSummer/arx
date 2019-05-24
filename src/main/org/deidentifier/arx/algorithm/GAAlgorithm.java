@@ -28,6 +28,7 @@ import cern.colt.list.LongArrayList;
 
 /**
  * The genetic algorithm.
+ * TODO: Which algorithm? Please include a reference.
  * 
  * @author Kieu-Mi Do
  */
@@ -73,12 +74,10 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	public boolean traverse() {
 
 		// Prepare
-		int k = this.maxValues.length + config.getSubpopulationSize(); // TODO: Why is k defined this way? Please explain and document?
+		int k = this.maxValues.length + config.getSubpopulationSize(); // TODO: Why is k defined this way? Please explain and document.
 		int itr = config.getIterations();
 		int imm = config.getImmigrationInterval();
 		int immf = config.getImmigrationFraction();
-		double elitePercent = config.getElitePercent();
-		int best = (int) Math.ceil(elitePercent * k);
 
 		// Build sub-populations
 		GASubpopulation z1 = new GASubpopulation();
@@ -91,6 +90,8 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			
 			// TODO: I didn't understand the logic that was implemented here
 			// TODO: And just replaced it with random choices
+			// TODO: Maybe this is specified differently and needs to be changed and documented
+			// TODO: Triangle matrix?
 			for (int j = 0; j < maxValues.length; j++) {
 				vec[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
 			}
@@ -104,6 +105,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			
 			// TODO: I didn't understand the logic that was implemented here
 			// TODO: And just replaced it with random choices
+			// TODO: Maybe this is specified differently and needs to be changed and documented
 			for (int j = 0; j < maxValues.length; j++) {
 				vec[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
 			}
@@ -113,20 +115,25 @@ public class GAAlgorithm extends AbstractAlgorithm {
 		// Main iterator
 		for (int t = 0; t < itr; t++) {
 			
-			// Calculate the fitness and sort all individuals
+			// Sort by fitness descending
 			z1.sort();
 			z2.sort();
 
 			// Swap individuals between GASubpopulations periodically
 			if (t % imm == 0) {
-				z1.moveIndividuals(z2, immf);
-				z2.moveIndividuals(z1, immf);
+				
+				// Moves the imff fittest individuals between groups
+				z1.moveFittestIndividuals(z2, immf);
+				z2.moveFittestIndividuals(z1, immf);
+				
+				// Sort by fitness descending
 				z1.sort();
 				z2.sort();
 			}
 
-			iterateSubpopulation(z1, best);
-			iterateSubpopulation(z2, best);
+			// Iterate
+			iterateSubpopulation(z1);
+			iterateSubpopulation(z2);
 		}
 
 		// Check whether we found a solution
@@ -148,26 +155,30 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	}
 	
 	/**
-	 * Returns a mutated transformation
+	 * Returns a mutated transformation, which means that a random parent is selected.
+	 * TODO: Is this how it is specified? Please document.
 	 * 
 	 * @return
 	 */
 	private Transformation getMutatedIndividual(Transformation transformation) {
 		LongArrayList list = transformation.getSuccessors();
+		if (list == null || list.isEmpty()) {
+			return null;
+		}
 		int r = (int) (this.random.nextDouble() * list.size());
 		long s = list.getQuick(r);
 		return getIndividual(this.solutionSpace.getTransformation(s).getGeneralization());
 	}
 	
 	/**
-	 * Selects a random parent.
+	 * Selects a random individual within the given range from [0, range[.
 	 * 
 	 * @param pop
-	 * @param best
+	 * @param range
 	 * @return
 	 */
-	private Transformation getRandomParent(GASubpopulation pop, int best) {
-		int r = (int) (random.nextDouble() * best);
+	private Transformation getRandomIndividual(GASubpopulation pop, int range) {
+		int r = (int) (random.nextDouble() * range);
 		return pop.getIndividual(r);
 	}
 	
@@ -175,21 +186,25 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	 * Performs one iteration on a subpopulation.
 	 * 
 	 * @param pop - TODO: What is this?
-	 * @param best
 	 */
-	private void iterateSubpopulation(GASubpopulation pop, int best) {
+	private void iterateSubpopulation(GASubpopulation pop) {
+		
+		// The population (ordered by fitness descending) consists of 3 groups
+		// First: all individuals in the elite group will remain unchanged
+		// Second: all individuals in the next group will be crossed over
+		// Third: all remaining individuals will be mutated
 		
 		// Calculate mutation configuration parameters
 		int k = pop.individualCount();
-		double crossoverPercent = config.getCrossoverPercent();
-		int crossoverCount = (int) Math.ceil(k * crossoverPercent);
+		int crossoverCount = (int) Math.ceil(config.getCrossoverPercent() * k);
+		int eliteCount = (int) Math.ceil(config.getElitePercent() * k);
 		
 		// Crossover a selection of individuals
 		for (int crossover = 0; crossover < crossoverCount; crossover++) {
 			
-			// Select parents
-			Transformation parent1 = getRandomParent(pop, best);
-			Transformation parent2 = getRandomParent(pop, best);
+			// Select parents from elite group
+			Transformation parent1 = getRandomIndividual(pop, eliteCount);
+			Transformation parent2 = getRandomIndividual(pop, eliteCount);
 
 			// Create crossover child
 			int[] vec = new int[maxValues.length];
@@ -198,19 +213,20 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			}
 			
 			// Replace
-			pop.setIndividual(crossover + best, getIndividual(vec));
+			// TODO: This replaces the best individuals of the non-elite group
+			// TODO: Wouldn't it be better to replace the worst individuals in the non-elite group
+			pop.setIndividual(eliteCount + crossover, getIndividual(vec));
 		}
 
-		// TODO: I don't understand the parameters in the for-loop. Please explain and document.
 		// Mutate rest of individuals
-		for (int mutation = best + crossoverCount; mutation < k; mutation++) {
+		for (int mutation = eliteCount + crossoverCount; mutation < k; mutation++) {
 			
-			// Determine how the mutation should occur
-			Transformation parent = getRandomParent(pop, best);
-			pop.removeIndividual(mutation);
+			// Select random parent from elite group
+			Transformation parent = getRandomIndividual(pop, eliteCount);
 			Transformation individual = getMutatedIndividual(parent);
-			trackOptimum(individual);
-			pop.addIndividual(individual);
+			if (individual != null) {
+				pop.setIndividual(mutation, individual);
+			}
 		}
 	}
 }
