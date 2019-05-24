@@ -170,11 +170,16 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	
 	/**
 	 * Returns a mutated transformation, which means that a random parent is selected.
-	 * TODO: Is this how it is specified? Please document.
+	 * 	- Randomly generate an integer r, representing the number of
+	 *    mutated places (from 1 to ceil (upper bound on mutation probability *m))
+	 *  - Randomly generate r unrepeated integers (within the range [1, m]),
+	 *    representing the locations of mutated places
+	 *  - Replace selected places with random levels
 	 * 
 	 * @return
 	 */
 	private Transformation getMutatedIndividual(Transformation transformation) {
+		// TODO: Implement as described in the method comment
 		LongArrayList list = transformation.getSuccessors();
 		if (list == null || list.isEmpty()) {
 			return null;
@@ -240,11 +245,11 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	}
 	
 	/**
-	 * Performs one iteration on a subpopulation.
+	 * Performs one iteration on a sub-population.
 	 * 
-	 * @param pop - TODO: What is this?
+	 * @param population
 	 */
-	private void iterateSubpopulation(GASubpopulation pop) {
+	private void iterateSubpopulation(GASubpopulation population) {
 		
 		// The population (ordered by fitness descending) consists of 3 groups
 		// - First: all individuals in the elite group will remain unchanged
@@ -252,24 +257,23 @@ public class GAAlgorithm extends AbstractAlgorithm {
 		// - Third: all remaining individuals will replaced by crossed-over instances
 		
 		// Calculate mutation configuration parameters
-		int k = pop.individualCount();
+		int k = population.individualCount();
 		int crossoverCount = (int) Math.ceil(config.getCrossoverPercent() * k);
 		int eliteCount = (int) Math.ceil(config.getElitePercent() * k);
 
 		// Mutate fittest non-elite individuals
-		Transformation[] parents = getRandomIndividuals(pop, eliteCount, k - crossoverCount - eliteCount);
 		for (int mutation = eliteCount; mutation < k - crossoverCount; mutation++) {
 			
 			// Mutate
-			Transformation individual = getMutatedIndividual(parents[mutation - eliteCount]);
+			Transformation individual = getMutatedIndividual(population.getIndividual(mutation));
 			if (individual != null) {
-				pop.setIndividual(mutation, individual);
+				population.setIndividual(mutation, individual);
 			}
 		}
 		
 		// Crossover worst individuals
-		Transformation[] parents1 = getRandomIndividuals(pop, eliteCount, crossoverCount);
-		Transformation[] parents2 = getRandomIndividuals(pop, eliteCount, crossoverCount);
+		Transformation[] parents1 = getRandomIndividuals(population, eliteCount, crossoverCount);
+		Transformation[] parents2 = getRandomIndividuals(population, eliteCount, crossoverCount);
 		for (int crossover = 0; crossover < crossoverCount; crossover++) {
 			
 			// Create crossover child
@@ -279,7 +283,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			}
 			
 			// Replace
-			pop.setIndividual(k - crossover - 1, getIndividual(vec));
+			population.setIndividual(k - crossover - 1, getIndividual(vec));
 		}
 	}
 }
