@@ -1,43 +1,43 @@
+/*
+ * ARX: Powerful Data Anonymization
+ * Copyright 2012 - 2018 Fabian Prasser and contributors
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.deidentifier.arx.algorithm;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import org.deidentifier.arx.framework.lattice.Transformation;
+
 /**
  * Represents a subpopulation.
  * 
  * @author Kieu-Mi Do
- *
  */
 public class GASubpopulation {
-	private List<GAIndividual> individuals = new ArrayList<>();
-	private int colCount;
 
-	/**
-	 * Creates a new subpopulation.
-	 * 
-	 * @param colCount
-	 */
-	public GASubpopulation(int colCount) {
-		this.colCount = colCount;
-	}
+	/** List of individuals*/
+	private List<Transformation> individuals = new ArrayList<>();
 
 	/**
 	 * Adds an individual to the subpopulation.
 	 * 
-	 * @param ind
+	 * @param individual
 	 */
-	public void addIndividual(GAIndividual ind) {
-		individuals.add(ind);
-	}
-
-	/**
-	 * Removes an individual from the subpopulation.
-	 * 
-	 * @param ind
-	 */
-	public void removeIndividual(GAIndividual ind) {
-		individuals.remove(ind);
+	public void addIndividual(Transformation individual) {
+		individuals.add(individual);
 	}
 
 	/**
@@ -46,21 +46,8 @@ public class GASubpopulation {
 	 * @param index
 	 * @return
 	 */
-	public GAIndividual getIndividual(int index) {
+	public Transformation getIndividual(int index) {
 		return individuals.get(index);
-	}
-
-	/**
-	 * Moves 'count' Individuals from this subpopulation to 'other'
-	 * 
-	 * @param other
-	 * @param count
-	 */
-	public void moveIndividuals(GASubpopulation other, int count) {
-		int size = this.individualCount();
-		int min = Math.min(count, size);
-		for (int i = 0; i < min; i++)
-			other.individuals.add(individuals.remove(0));
 	}
 
 	/**
@@ -73,16 +60,40 @@ public class GASubpopulation {
 	}
 
 	/**
-	 * Gets the amount of columns.
+	 * Moves 'count' Individuals from this subpopulation to 'other'
 	 * 
-	 * @return
+	 * @param other
+	 * @param count
 	 */
-	public int colCount() {
-		return colCount;
+	public void moveIndividuals(GASubpopulation other, int count) {
+		int size = this.individualCount();
+		int min = Math.min(count, size);
+		for (int i = 0; i < min; i++) {
+			other.individuals.add(individuals.remove(0));
+		}
+	}
+
+	/**
+	 * Removes an individual from the subpopulation.
+	 * 
+	 * @param index
+	 */
+	public void removeIndividual(int index) {
+		individuals.remove(index);
+	}
+
+	/**
+	 * Replaces the individual at a certain index
+	 * @param index
+	 * @param individual
+	 */
+	public void setIndividual(int index, Transformation individual) {
+		this.individuals.set(index, individual);
 	}
 
 	/**
 	 * Sorts the Individuals according to their information loss.
+	 * TODO: What is the intention here? Sorted by fitness in ascending order or descending order? 
 	 */
 	public void sort() {
 		individuals.sort((a, b) -> {
