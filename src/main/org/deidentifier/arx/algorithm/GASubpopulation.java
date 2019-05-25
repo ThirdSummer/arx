@@ -17,6 +17,7 @@
 package org.deidentifier.arx.algorithm;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import org.deidentifier.arx.framework.lattice.Transformation;
@@ -25,6 +26,7 @@ import org.deidentifier.arx.framework.lattice.Transformation;
  * Represents a subpopulation.
  * 
  * @author Kieu-Mi Do
+ * @author Fabian Prasser
  */
 public class GASubpopulation {
 
@@ -88,14 +90,17 @@ public class GASubpopulation {
 	public void sort() {
 		
 		// Sort descending by fitness, ascending in terms of information loss.
-		individuals.sort((a, b) -> {
-			if (a == null) {
-				return -1;
-			}
-			if (b == null) {
-				return +1;
-			}
-			return a.getInformationLoss().compareTo(b.getInformationLoss());
-		});
+		individuals.sort(new Comparator<Transformation>() {
+            @Override
+            public int compare(Transformation t1, Transformation t2) {
+                if (t1 == null) {
+                    return -1;
+                }
+                if (t2 == null) {
+                    return +1;
+                }
+                return t1.getInformationLoss().compareTo(t2.getInformationLoss());
+            }
+        });
 	}
 }

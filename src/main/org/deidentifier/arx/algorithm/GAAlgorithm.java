@@ -17,6 +17,7 @@
 package org.deidentifier.arx.algorithm;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -30,13 +31,12 @@ import org.deidentifier.arx.framework.lattice.SolutionSpace;
 import org.deidentifier.arx.framework.lattice.Transformation;
 import org.deidentifier.arx.metric.InformationLoss;
 
-import cern.colt.list.LongArrayList;
-
 /**
  * The genetic algorithm.
  * TODO: Which algorithm? Please include a reference.
  * 
  * @author Kieu-Mi Do
+ * @author Fabian Prasser
  */
 public class GAAlgorithm extends AbstractAlgorithm {
 
@@ -50,16 +50,16 @@ public class GAAlgorithm extends AbstractAlgorithm {
 		return new GAAlgorithm(solutionSpace, checker);
 	}
 
-	/** RNG */
-	private Random random;
-	/** Configuration */
-	private GAAlgorithmConfig config;
-	/** Max values */
-	private int[] maxValues;
-	/** Min values */
-	private int[] minValues;
-	/** Checker */
-	private TransformationChecker checker;
+    /** RNG */
+    private final Random                random;
+    /** Configuration */
+    private final GAAlgorithmConfig     config;
+    /** Max values */
+    private final int[]                 maxValues;
+    /** Min values */
+    private final int[]                 minValues;
+    /** Checker */
+    private final TransformationChecker checker;
 
 	/**
 	 * Creates a new instance
@@ -169,24 +169,35 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	}
 	
 	/**
-	 * Returns a mutated transformation, which means that a random parent is selected.
-	 * 	- Randomly generate an integer r, representing the number of
-	 *    mutated places (from 1 to ceil (upper bound on mutation probability *m))
-	 *  - Randomly generate r unrepeated integers (within the range [1, m]),
-	 *    representing the locations of mutated places
-	 *  - Replace selected places with random levels
-	 * 
+	 * Returns a mutated transformation:
 	 * @return
 	 */
 	private Transformation getMutatedIndividual(Transformation transformation) {
-		// TODO: Implement as described in the method comment
-		LongArrayList list = transformation.getSuccessors();
-		if (list == null || list.isEmpty()) {
-			return null;
-		}
-		int r = (int) (this.random.nextDouble() * list.size());
-		long s = list.getQuick(r);
-		return getIndividual(this.solutionSpace.getTransformation(s).getGeneralization());
+	    
+	    // Prepare
+	    int[] generalization = transformation.getGeneralization().clone();
+
+	    // Randomly generate an integer r, representing the number of
+	    // mutated places (from 1 to ceil (upper bound on mutation probability * m))
+	    int max = (int)Math.ceil(config.getMutationProbability() * generalization.length);
+	    int numMutations = random.nextInt(max + 1);
+	     
+	    // Randomly generate r unrepeated integers (within the range [1, m]),
+	    // representing the locations of mutated places
+	    List<Integer> list = new ArrayList<>();
+	    for (int i = 0; i < generalization.length; i++) {
+	        list.add(i);
+	    }
+	    Collections.shuffle(list, random);
+	    List<Integer> mutationIndices = list.subList(0, numMutations);
+	     
+	    // Replace selected places with random levels
+	    for (int index : mutationIndices) {
+	        generalization[index] = minValues[index] + (int)(random.nextDouble() * (maxValues[index] - minValues[index]));
+	    }
+	    
+	    // Done
+		return getIndividual(generalization);
 	}
 	
 	/**
