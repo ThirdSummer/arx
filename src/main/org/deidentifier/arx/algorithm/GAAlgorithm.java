@@ -107,7 +107,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 				
 				// Generate random individual
 				for (int j = 0; j < maxValues.length; j++) {
-					generalization[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
+					generalization[j] = getRandomGeneralizationLevel(j); 
 				}
 			}
 			z1.addIndividual(getIndividual(generalization));
@@ -121,7 +121,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			
 			// Generate random individual
 			for (int j = 0; j < maxValues.length; j++) {
-				generalization[j] = minValues[j] + (int)(random.nextDouble() * (maxValues[j] - minValues[j])); 
+				generalization[j] = getRandomGeneralizationLevel(j); 
 			}
 			z2.addIndividual(getIndividual(generalization));
 		}
@@ -193,11 +193,20 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	     
 	    // Replace selected places with random levels
 	    for (int index : mutationIndices) {
-	        generalization[index] = minValues[index] + (int)(random.nextDouble() * (maxValues[index] - minValues[index]));
+	        generalization[index] = getRandomGeneralizationLevel(index);
 	    }
 	    
 	    // Done
 		return getIndividual(generalization);
+	}
+	
+	/**
+	 * Returns a random generalization level
+	 * @param dimension
+	 * @return
+	 */
+	private int getRandomGeneralizationLevel(int dimension) {
+		return minValues[dimension] + (int)Math.round(random.nextDouble() * (maxValues[dimension] - minValues[dimension]));
 	}
 	
 	/**
