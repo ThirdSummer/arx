@@ -22,17 +22,17 @@ import java.util.List;
 import org.deidentifier.arx.framework.lattice.Transformation;
 
 /**
- * Represents a subpopulation.
+ * Represents a sub-population.
  * 
  * @author Kieu-Mi Do
  */
 public class GASubpopulation {
 
-	/** List of individuals*/
+	/** List of individuals */
 	private List<Transformation> individuals = new ArrayList<>();
 
 	/**
-	 * Adds an individual to the subpopulation.
+	 * Adds an individual to the sub-population.
 	 * 
 	 * @param individual
 	 */
@@ -51,7 +51,7 @@ public class GASubpopulation {
 	}
 
 	/**
-	 * Gets the size of the subpopulation.
+	 * Gets the size of the sub-population.
 	 * 
 	 * @return
 	 */
@@ -60,7 +60,7 @@ public class GASubpopulation {
 	}
 
 	/**
-	 * Moves 'count' Individuals from this subpopulation to 'other'
+	 * Moves 'count' Individuals from this sub-population to 'other'
 	 * 
 	 * @param other
 	 * @param count
@@ -75,6 +75,7 @@ public class GASubpopulation {
 
 	/**
 	 * Replaces the individual at a certain index
+	 * 
 	 * @param index
 	 * @param individual
 	 */
@@ -83,10 +84,11 @@ public class GASubpopulation {
 	}
 
 	/**
-	 * Sorts the individuals descending by fitness, which means ascending in terms of information loss.
+	 * Sorts the individuals descending by fitness, which means ascending in
+	 * terms of information loss.
 	 */
 	public void sort() {
-		
+
 		// Sort descending by fitness, ascending in terms of information loss.
 		individuals.sort((a, b) -> {
 			if (a == null) {

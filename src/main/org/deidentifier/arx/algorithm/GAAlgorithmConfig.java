@@ -30,7 +30,8 @@ public class GAAlgorithmConfig {
 	private double elitePercent = 0.2f;
 	private double crossoverPercent = 0.2f;
 	private boolean deterministic = false;
-	
+	private double mutationProbability = 0.2f;
+
 	public double getCrossoverPercent() {
 		return crossoverPercent;
 	}
@@ -57,5 +58,9 @@ public class GAAlgorithmConfig {
 
 	public boolean isDeterministic() {
 		return deterministic;
+	}
+
+	public double getMutationProbability() {
+		return mutationProbability;
 	}
 }
