@@ -54,7 +54,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	/** RNG */
 	private Random random;
 	/** Configuration */
-	private GAAlgorithmConfig config;
+	private GAConfig config;
 	/** Max values */
 	private int[] maxValues;
 	/** Min values */
@@ -70,7 +70,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 	 */
 	private GAAlgorithm(SolutionSpace solutionSpace, TransformationChecker checker) {
 		super(solutionSpace, checker);
-		this.config = new GAAlgorithmConfig();
+		this.config = new GAConfig();
 		this.checker = checker;
 		this.checker.getHistory().setStorageStrategy(StorageStrategy.ALL);
 		this.maxValues = solutionSpace.getTop().getGeneralization();
@@ -115,7 +115,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 
 				// Generate random individual
 				for (int j = 0; j < maxValues.length; j++) {
-					generalization[j] = minValues[j] + (int) (random.nextDouble() * (maxValues[j] - minValues[j]));
+					generalization[j] = randomBetween(minValues[j], maxValues[j]);
 				}
 			}
 			z1.addIndividual(getIndividual(generalization));
@@ -129,7 +129,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 
 			// Generate random individual
 			for (int j = 0; j < maxValues.length; j++) {
-				generalization[j] = minValues[j] + (int) (random.nextDouble() * (maxValues[j] - minValues[j]));
+				generalization[j] = randomBetween(minValues[j], maxValues[j]);
 			}
 			z2.addIndividual(getIndividual(generalization));
 		}
@@ -156,6 +156,7 @@ public class GAAlgorithm extends AbstractAlgorithm {
 			// Iterate
 			iterateSubpopulation(z1);
 			iterateSubpopulation(z2);
+			System.out.println(getGlobalOptimum() == null);
 		}
 
 		// Check whether we found a solution

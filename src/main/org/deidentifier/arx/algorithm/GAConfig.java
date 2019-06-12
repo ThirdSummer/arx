@@ -21,7 +21,7 @@ package org.deidentifier.arx.algorithm;
  * 
  * @author Kieu-Mi Do
  */
-public class GAAlgorithmConfig {
+public class GAConfig {
 
 	private int subpopulationSize = 100;
 	private int iterations = 50;
